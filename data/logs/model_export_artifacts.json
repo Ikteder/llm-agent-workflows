@@ -1,0 +1,50 @@
+{
+  "logistic-regression": {
+    "model_key": "logistic-regression",
+    "torchscript_path": null,
+    "onnx_path": "outputs\\demo\\exports\\logistic-regression\\logistic-regression.onnx",
+    "npz_path": "outputs\\demo\\exports\\logistic-regression\\logistic-regression.npz",
+    "metadata_path": "outputs\\demo\\exports\\logistic-regression\\logistic-regression.metadata.json",
+    "failure_log_path": null
+  },
+  "xgboost": {
+    "model_key": "xgboost",
+    "torchscript_path": null,
+    "onnx_path": "outputs\\demo\\exports\\xgboost\\xgboost.onnx",
+    "npz_path": "outputs\\demo\\exports\\xgboost\\xgboost.npz",
+    "metadata_path": "outputs\\demo\\exports\\xgboost\\xgboost.metadata.json",
+    "failure_log_path": null
+  },
+  "resnet18": {
+    "model_key": "resnet18",
+    "torchscript_path": "outputs\\demo\\exports\\resnet18\\resnet18.torchscript.pt",
+    "onnx_path": "outputs\\demo\\exports\\resnet18\\resnet18.onnx",
+    "npz_path": "outputs\\demo\\exports\\resnet18\\resnet18.npz",
+    "metadata_path": "outputs\\demo\\exports\\resnet18\\resnet18.metadata.json",
+    "failure_log_path": null
+  },
+  "mobilenetv3": {
+    "model_key": "mobilenetv3",
+    "torchscript_path": "outputs\\demo\\exports\\mobilenetv3\\mobilenetv3.torchscript.pt",
+    "onnx_path": "outputs\\demo\\exports\\mobilenetv3\\mobilenetv3.onnx",
+    "npz_path": "outputs\\demo\\exports\\mobilenetv3\\mobilenetv3.npz",
+    "metadata_path": "outputs\\demo\\exports\\mobilenetv3\\mobilenetv3.metadata.json",
+    "failure_log_path": null
+  },
+  "efficientnet-b0": {
+    "model_key": "efficientnet-b0",
+    "torchscript_path": "outputs\\demo\\exports\\efficientnet-b0\\efficientnet-b0.torchscript.pt",
+    "onnx_path": "outputs\\demo\\exports\\efficientnet-b0\\efficientnet-b0.onnx",
+    "npz_path": "outputs\\demo\\exports\\efficientnet-b0\\efficientnet-b0.npz",
+    "metadata_path": "outputs\\demo\\exports\\efficientnet-b0\\efficientnet-b0.metadata.json",
+    "failure_log_path": null
+  },
+  "distilgpt2": {
+    "model_key": "distilgpt2",
+    "torchscript_path": null,
+    "onnx_path": null,
+    "npz_path": "outputs\\demo\\exports\\distilgpt2\\distilgpt2.npz",
+    "metadata_path": "outputs\\demo\\exports\\distilgpt2\\distilgpt2.metadata.json",
+    "failure_log_path": null
+  }
+}

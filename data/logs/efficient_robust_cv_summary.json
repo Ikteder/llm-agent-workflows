@@ -1,0 +1,12 @@
+{
+  "artifacts": {
+    "leaderboard_csv": "outputs\\demo\\leaderboard.csv",
+    "robustness_csv": "outputs\\demo\\robustness_drop_table.csv",
+    "ablation_csv": "outputs\\demo\\ablation_summary.csv",
+    "latency_plot": "outputs\\demo\\latency_vs_accuracy.png",
+    "size_plot": "outputs\\demo\\model_size_vs_performance.png",
+    "robustness_plot": "outputs\\demo\\robustness_drop_comparison.png",
+    "html_report": "outputs\\demo\\final_report.html",
+    "md_report": "outputs\\demo\\final_report.md"
+  }
+}

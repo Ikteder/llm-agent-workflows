@@ -1,0 +1,3 @@
+[2026-04-11 11:18:44] efficient_robust_cv: saved leaderboard.csv and robustness drop visualizations.
+[2026-04-11 11:19:07] efficient_robust_cv: exported CIFAR-10 confusion matrix and failure gallery artifacts.
+[2026-04-11 11:19:51] efficient_robust_cv: rendered final_report.md and summary.json for the benchmark bundle.

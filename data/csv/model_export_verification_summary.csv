@@ -1,0 +1,15 @@
+model_key,format_name,max_abs_error,mean_abs_error,max_rel_error,passed
+distilgpt2,npz,0.0,0.0,0.0,True
+efficientnet-b0,npz,0.0,0.0,0.0,True
+efficientnet-b0,onnx,3.3034284942917713e-20,7.363800112049302e-21,3.3034284942917713e-16,True
+efficientnet-b0,torchscript,0.0,0.0,0.0,True
+logistic-regression,npz,1.1920928955078125e-06,1.7690624076749373e-07,8.525320481567178e-06,True
+logistic-regression,onnx,1.6093254089355469e-06,2.7989679551865265e-07,0.0006623349618166685,True
+mobilenetv3,npz,0.0,0.0,0.0,True
+mobilenetv3,onnx,3.677613769070831e-16,8.592789922636784e-17,3.677613769070831e-12,True
+mobilenetv3,torchscript,0.0,0.0,0.0,True
+resnet18,npz,0.0,0.0,0.0,True
+resnet18,onnx,2.6226043701171875e-06,5.79042364279303e-07,0.0006049891817383468,True
+resnet18,torchscript,0.0,0.0,0.0,True
+xgboost,npz,0.0,0.0,0.0,True
+xgboost,onnx,8.568167686462402e-08,4.0512531995773315e-08,2.389245310041588e-06,True

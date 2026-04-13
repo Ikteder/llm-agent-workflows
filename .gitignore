@@ -1,0 +1,11 @@
+.env
+.venv/
+.venv_run/
+__pycache__/
+*.pyc
+.pytest_cache/
+artifacts/generated/
+artifacts/generated/*.db
+app.db
+*.egg-info/
+.streamlit/

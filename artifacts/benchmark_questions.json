@@ -1,0 +1,202 @@
+[
+  {
+    "question_id": "q01",
+    "question": "Which model performed best on CIFAR-10 in the vision benchmark?",
+    "project": "efficient_robust_cv",
+    "required_source": "efficient_robust_cv_leaderboard.csv",
+    "expected_keywords": ["ConvNeXt-Tiny", "0.926"],
+    "notes": "Top CIFAR-10 accuracy should come from the leaderboard."
+  },
+  {
+    "question_id": "q02",
+    "question": "Which vision backbone was fastest on CIFAR-10?",
+    "project": "efficient_robust_cv",
+    "required_source": "efficient_robust_cv_leaderboard.csv",
+    "expected_keywords": ["MobileNetV3", "379.742"],
+    "notes": "Lowest latency among CIFAR-10 rows."
+  },
+  {
+    "question_id": "q03",
+    "question": "Which model performed best on BreastMNIST?",
+    "project": "efficient_robust_cv",
+    "required_source": "efficient_robust_cv_leaderboard.csv",
+    "expected_keywords": ["EfficientNet-B0", "0.884"],
+    "notes": "Top BreastMNIST accuracy."
+  },
+  {
+    "question_id": "q04",
+    "question": "Which model had the best AUROC in predictive maintenance?",
+    "project": "predictive_maintenance",
+    "required_source": "predictive_maintenance_model_comparison.csv",
+    "expected_keywords": ["Logistic Regression", "0.9961"],
+    "notes": "Highest AUROC among predictive maintenance rows."
+  },
+  {
+    "question_id": "q05",
+    "question": "Which predictive maintenance method had the best F1 score?",
+    "project": "predictive_maintenance",
+    "required_source": "predictive_maintenance_model_comparison.csv",
+    "expected_keywords": ["Supervised + Anomaly + Drift Fusion", "0.791"],
+    "notes": "Hybrid fusion leads F1."
+  },
+  {
+    "question_id": "q06",
+    "question": "Which predictive maintenance method gave the longest lead time?",
+    "project": "predictive_maintenance",
+    "required_source": "predictive_maintenance_model_comparison.csv",
+    "expected_keywords": ["PCA Reconstruction", "112.7"],
+    "notes": "Longest lead time cycles."
+  },
+  {
+    "question_id": "q07",
+    "question": "Which predictive maintenance model had the lowest false alarm rate?",
+    "project": "predictive_maintenance",
+    "required_source": "predictive_maintenance_model_comparison.csv",
+    "expected_keywords": ["Random Forest", "0.0031"],
+    "notes": "Smallest false alarm rate."
+  },
+  {
+    "question_id": "q08",
+    "question": "In the model export benchmark, which format was fastest for MobileNetV3?",
+    "project": "model_export",
+    "required_source": "model_export_benchmark_summary.csv",
+    "expected_keywords": ["onnx", "15.941"],
+    "notes": "Lowest latency for MobileNetV3."
+  },
+  {
+    "question_id": "q09",
+    "question": "Which export path was fastest for ResNet18?",
+    "project": "model_export",
+    "required_source": "model_export_benchmark_summary.csv",
+    "expected_keywords": ["onnx", "25.806"],
+    "notes": "Fastest ResNet18 export runtime."
+  },
+  {
+    "question_id": "q10",
+    "question": "Which model-format combination delivered the highest throughput in the model export toolkit?",
+    "project": "model_export",
+    "required_source": "model_export_benchmark_summary.csv",
+    "expected_keywords": ["logistic-regression", "npz", "486618"],
+    "notes": "Highest throughput row."
+  },
+  {
+    "question_id": "q11",
+    "question": "Did the ONNX export for ResNet18 pass verification?",
+    "project": "model_export",
+    "required_source": "model_export_verification_summary.csv",
+    "expected_keywords": ["True", "resnet18", "onnx"],
+    "notes": "Verification status should be true."
+  },
+  {
+    "question_id": "q12",
+    "question": "Did DistilGPT-2 keep exact parity in the NPZ export?",
+    "project": "model_export",
+    "required_source": "model_export_verification_summary.csv",
+    "expected_keywords": ["distilgpt2", "0.0", "True"],
+    "notes": "NPZ exact parity."
+  },
+  {
+    "question_id": "q13",
+    "question": "Which drift monitor had the highest sensitivity?",
+    "project": "predictive_maintenance",
+    "required_source": "predictive_maintenance_drift_monitor_comparison.csv",
+    "expected_keywords": ["PSI Drift Monitor", "0.461"],
+    "notes": "Tie exists, but PSI should appear first in sorted table."
+  },
+  {
+    "question_id": "q14",
+    "question": "What does the predictive maintenance operator summary say about the hybrid fusion approach?",
+    "project": "predictive_maintenance",
+    "required_source": "predictive_maintenance_operator_summary.md",
+    "expected_keywords": ["Weighted ensemble", "drift", "anomaly"],
+    "notes": "Retrieval summary question."
+  },
+  {
+    "question_id": "q15",
+    "question": "Summarize the main failure cases discussed in the computer vision benchmark.",
+    "project": "efficient_robust_cv",
+    "required_source": "efficient_robust_cv_final_report.md",
+    "expected_keywords": ["gaussian", "blur", "cutout"],
+    "notes": "Failure summary should mention corruption patterns."
+  },
+  {
+    "question_id": "q16",
+    "question": "Which project artifact includes a CIFAR-10 confusion matrix?",
+    "project": "efficient_robust_cv",
+    "required_source": "efficient_robust_cv_cifar10_confusion_matrix.png",
+    "expected_keywords": ["confusion", "cifar10"],
+    "notes": "Artifact lookup."
+  },
+  {
+    "question_id": "q17",
+    "question": "Which project artifact includes the predictive maintenance confusion matrix?",
+    "project": "predictive_maintenance",
+    "required_source": "predictive_maintenance_hybrid_confusion.png",
+    "expected_keywords": ["confusion", "predictive"],
+    "notes": "Artifact lookup."
+  },
+  {
+    "question_id": "q18",
+    "question": "What files can I use to inspect model export verification results?",
+    "project": "model_export",
+    "required_source": "model_export_verification_summary.csv",
+    "expected_keywords": ["verification", "csv"],
+    "notes": "Metrics lookup should name verification CSV."
+  },
+  {
+    "question_id": "q19",
+    "question": "Which project had a stronger top AUROC: predictive maintenance or the CV benchmark?",
+    "project": null,
+    "required_source": "predictive_maintenance_model_comparison.csv",
+    "expected_keywords": ["predictive maintenance", "0.996"],
+    "notes": "Cross-project comparison should mention predictive maintenance being higher."
+  },
+  {
+    "question_id": "q20",
+    "question": "Where should I look for the model export latency comparison report?",
+    "project": "model_export",
+    "required_source": "model_export_report.md",
+    "expected_keywords": ["report", "model_export_report.md"],
+    "notes": "Document retrieval should cite the report."
+  },
+  {
+    "question_id": "q21",
+    "question": "Which experiment log says the CIFAR-10 confusion matrix was exported?",
+    "project": "efficient_robust_cv",
+    "required_source": "efficient_robust_cv_activity.log",
+    "expected_keywords": ["confusion matrix", "failure gallery"],
+    "notes": "Log retrieval should find the synthetic activity log."
+  },
+  {
+    "question_id": "q22",
+    "question": "Which predictive maintenance anomaly detector had the best recall?",
+    "project": "predictive_maintenance",
+    "required_source": "predictive_maintenance_model_comparison.csv",
+    "expected_keywords": ["One-Class SVM", "0.754"],
+    "notes": "Best recall among anomaly_detection rows."
+  },
+  {
+    "question_id": "q23",
+    "question": "Which predictive maintenance anomaly detector had the best AUROC?",
+    "project": "predictive_maintenance",
+    "required_source": "predictive_maintenance_model_comparison.csv",
+    "expected_keywords": ["Isolation Forest", "0.953"],
+    "notes": "Best anomaly AUROC."
+  },
+  {
+    "question_id": "q24",
+    "question": "Which MobileNetV3 variant was more robust on CIFAR-10?",
+    "project": "efficient_robust_cv",
+    "required_source": "efficient_robust_cv_ablation_summary.csv",
+    "expected_keywords": ["robust_train", "0.154"],
+    "notes": "Ablation summary should show lower robustness drop."
+  },
+  {
+    "question_id": "q25",
+    "question": "Which MobileNetV3 variant was more robust on BreastMNIST?",
+    "project": "efficient_robust_cv",
+    "required_source": "efficient_robust_cv_ablation_summary.csv",
+    "expected_keywords": ["robust_train", "0.060"],
+    "notes": "Ablation summary should show lower robustness drop."
+  }
+]
