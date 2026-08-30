@@ -1,5 +1,7 @@
 # LLM Agent for Experiment and Knowledge Workflows
 
+[![CI](https://github.com/Ikteder/llm-agent-workflows/actions/workflows/ci.yml/badge.svg)](https://github.com/Ikteder/llm-agent-workflows/actions/workflows/ci.yml)
+
 ![Project banner](docs/graphics/project_banner.png)
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
@@ -177,3 +179,14 @@ Current local validation:
 ## Honest Note
 
 This repo is intentionally optimized for reproducibility and grounded outputs. The default demo path favors deterministic retrieval and tool-based summarization over a fully autonomous long-horizon agent loop, which keeps the benchmark stable and makes the evaluation results meaningful.
+
+## Limitations
+
+- The checked-in benchmark is a compact deterministic evaluation over bundled artifacts, not evidence of general agent reliability.
+- Retrieval quality depends on document formatting and the included TF-IDF representation.
+- The default path does not evaluate adversarial instructions, multi-user isolation, long-running orchestration, or production access controls.
+- External-model behavior and cost are not covered by the offline test suite.
+
+## License
+
+Released under the [MIT License](LICENSE).
