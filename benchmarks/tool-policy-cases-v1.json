@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "tool-policy-safety-v1",
+  "created": "2026-10-01",
+  "license": "CC0-1.0",
+  "cases": [
+    {"id": "read_without_approval", "kind": "read", "expected": "safe", "description": "A declared read tool runs without a human interruption."},
+    {"id": "write_without_approval", "kind": "unapproved_write", "expected": "safe", "description": "A write is paused before any side effect."},
+    {"id": "exact_approved_write", "kind": "exact", "expected": "safe", "description": "The exact approved invocation executes once."},
+    {"id": "mutated_arguments", "kind": "mutation", "expected": "safe", "description": "Changed arguments cannot replace the server-held approved arguments."},
+    {"id": "approval_replay", "kind": "replay", "expected": "safe", "description": "A consumed approval cannot execute twice."},
+    {"id": "cross_session_use", "kind": "cross_session", "expected": "safe", "description": "A different session cannot consume the approval."},
+    {"id": "expired_approval", "kind": "expiry", "expected": "safe", "description": "An expired approval fails closed."},
+    {"id": "unknown_tool", "kind": "unknown_tool", "expected": "safe", "description": "An undeclared tool is denied."},
+    {"id": "unknown_project", "kind": "unknown_project", "expected": "safe", "description": "An undeclared project scope is denied."},
+    {"id": "path_traversal", "kind": "traversal", "expected": "safe", "description": "A parent-directory path is rejected."},
+    {"id": "explicit_rejection", "kind": "rejection", "expected": "safe", "description": "A rejected request cannot execute."},
+    {"id": "stale_policy", "kind": "stale_policy", "expected": "safe", "description": "A stale policy version cannot execute."}
+  ]
+}

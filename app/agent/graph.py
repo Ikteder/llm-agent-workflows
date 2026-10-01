@@ -17,7 +17,8 @@ from app.agent.tools import (
     show_confusion_matrix,
     summarize_failures,
 )
-from app.models.schemas import AgentResponse, ChatRequest, SourceChunk, ToolCall
+from app.agent.tool_policy import ToolInvocation, ToolPolicyEngine
+from app.models.schemas import AgentResponse, ChatRequest, ReportArtifact, SourceChunk, ToolCall
 
 
 PROJECT_KEYWORDS = {
@@ -155,9 +156,27 @@ def _call_openai_if_available(question: str, memory_context: str, tool_context: 
 class AgentWorkflow:
     tool_context: ToolContext
     memory: SessionMemory
+    tool_policy: ToolPolicyEngine
 
     def answer(self, request: ChatRequest) -> AgentResponse:
         started = time.perf_counter()
+        if request.project is not None and not self.tool_policy.validate_project(request.project):
+            return AgentResponse(
+                session_id=request.session_id,
+                question=request.question,
+                answer=f"Project scope `{request.project}` is not available to this agent.",
+                project=request.project,
+                intent="policy_denied",
+                tools_used=[
+                    ToolCall(
+                        name="tool_policy",
+                        arguments={"project": request.project},
+                        summary="Denied an unknown project scope before tool planning.",
+                    )
+                ],
+                grounded=False,
+                latency_ms=(time.perf_counter() - started) * 1000.0,
+            )
         project = _infer_project(request.question, request.project)
         metric, prefer_lowest = _infer_metric(request.question)
         models = _infer_models(request.question)
@@ -171,6 +190,76 @@ class AgentWorkflow:
         intent = "retrieval"
         answer = ""
         report = None
+        approval_required = None
+        approval_receipt = None
+
+        def create_report_with_policy(title: str) -> ReportArtifact | None:
+            nonlocal approval_required, approval_receipt
+            source_bindings = [source.model_dump(mode="json") for source in sources[:6]]
+            arguments = {
+                "title": title,
+                "question": request.question,
+                "summary": answer,
+                "sources": source_bindings,
+            }
+            if request.approval_id:
+                decision = self.tool_policy.consume(
+                    request.approval_id,
+                    session_id=request.session_id,
+                    tool_name="generate_report",
+                    project=project,
+                )
+            else:
+                decision = self.tool_policy.authorize(
+                    ToolInvocation(
+                        session_id=request.session_id,
+                        tool_name="generate_report",
+                        arguments=arguments,
+                        project=project,
+                    )
+                )
+            if decision.status == "pending":
+                approval_required = decision.approval_request
+                tools_used.append(
+                    ToolCall(
+                        name="tool_policy",
+                        arguments={
+                            "tool_name": "generate_report",
+                            "project": project,
+                            "invocation_digest": approval_required.invocation_digest if approval_required else None,
+                        },
+                        summary="Paused report generation for exact-intent approval.",
+                    )
+                )
+                return None
+            if decision.status == "denied":
+                tools_used.append(
+                    ToolCall(
+                        name="tool_policy",
+                        arguments={"tool_name": "generate_report", "project": project},
+                        summary=f"Denied report generation: {decision.reason}.",
+                    )
+                )
+                return None
+
+            approval_receipt = decision.receipt
+            approved_arguments = decision.arguments or arguments
+            approved_sources = [SourceChunk.model_validate(item) for item in approved_arguments["sources"]]
+            artifact = generate_report(
+                self.tool_context,
+                title=str(approved_arguments["title"]),
+                question=str(approved_arguments["question"]),
+                summary=str(approved_arguments["summary"]),
+                sources=approved_sources,
+            )
+            tools_used.append(
+                ToolCall(
+                    name="generate_report",
+                    arguments={"title": artifact.title, "approval_receipt": approval_receipt},
+                    summary=f"Generated one approved report at {artifact.markdown_path}",
+                )
+            )
+            return artifact
 
         if any(token in lowered for token in ["compare", "best", "highest", "lowest", "fastest", "smallest", "more robust"]) or (
             metric is not None and ("which" in lowered or "what" in lowered)
@@ -209,14 +298,17 @@ class AgentWorkflow:
                 metric_value = best.get(result.metric_used, "")
                 project_label = best.get("project", "")
                 variant_label = best.get("variant", best.get("format_name", best.get("format", "")))
+                project_detail = f" in {project_label.replace('_', ' ')}" if project_label else ""
+                dataset_detail = f" on {dataset_label}" if dataset_label else ""
+                variant_detail = f" using {variant_label}" if variant_label else ""
                 detail = ""
                 if "source_file" in best:
                     detail = f" Source table: `{best['source_file']}`."
                 answer = (
                     f"{model_name} is the strongest match for this query"
-                    f"{f' in {project_label.replace('_', ' ')}' if project_label else ''}"
-                    f"{f' on {dataset_label}' if dataset_label else ''}"
-                    f"{f' using {variant_label}' if variant_label else ''}"
+                    f"{project_detail}"
+                    f"{dataset_detail}"
+                    f"{variant_detail}"
                     f" with `{result.metric_used} = {metric_value}`.{detail}"
                 )
                 if len(result.rows) > 1:
@@ -319,20 +411,11 @@ class AgentWorkflow:
                 ]
             )
             answer = _extractive_summary(request.question, sources)
-            report = generate_report(
-                self.tool_context,
-                title=f"{(project or 'cross_project').replace('_', ' ').title()} report",
-                question=request.question,
-                summary=answer,
-                sources=sources[:6],
-            )
-            tools_used.append(
-                ToolCall(
-                    name="generate_report",
-                    arguments={"title": report.title},
-                    summary=f"Generated report at {report.markdown_path}",
-                )
-            )
+            report = create_report_with_policy(f"{(project or 'cross_project').replace('_', ' ').title()} report")
+            if approval_required is not None:
+                answer += "\n\nReport creation is paused until you approve this exact tool call."
+            elif report is None:
+                answer += "\n\nReport creation was denied by the tool policy."
 
         elif "log" in lowered:
             intent = "log_lookup"
@@ -450,21 +533,12 @@ class AgentWorkflow:
         if openai_answer:
             answer = openai_answer
 
-        if request.generate_report and report is None:
-            report = generate_report(
-                self.tool_context,
-                title=f"{(project or 'cross_project').replace('_', ' ').title()} chat report",
-                question=request.question,
-                summary=answer,
-                sources=sources[:6],
-            )
-            tools_used.append(
-                ToolCall(
-                    name="generate_report",
-                    arguments={"title": report.title},
-                    summary=f"Generated report at {report.markdown_path}",
-                )
-            )
+        if request.generate_report and report is None and approval_required is None:
+            report = create_report_with_policy(f"{(project or 'cross_project').replace('_', ' ').title()} chat report")
+            if approval_required is not None:
+                answer += "\n\nReport creation is paused until you approve this exact tool call."
+            elif report is None:
+                answer += "\n\nReport creation was denied by the tool policy."
 
         self.memory.append(request.session_id, "user", request.question)
         self.memory.append(request.session_id, "assistant", answer)
@@ -482,4 +556,6 @@ class AgentWorkflow:
             memory_used=memory_context or None,
             latency_ms=latency_ms,
             grounded=bool(sources or "compare_runs" in intent or "metrics" in intent or "artifact" in intent),
+            approval_required=approval_required,
+            approval_receipt=approval_receipt,
         )

@@ -21,6 +21,30 @@ class ToolCall(BaseModel):
     summary: str
 
 
+class ToolApprovalRequest(BaseModel):
+    approval_id: str
+    tool_name: str
+    risk: Literal["read", "write"]
+    project: str | None = None
+    policy_version: str
+    invocation_digest: str
+    arguments: dict[str, Any]
+    created_at: str
+    expires_at: str
+
+
+class ToolApprovalDecision(BaseModel):
+    session_id: str
+    decision: Literal["approve", "reject"]
+
+
+class ToolApprovalDecisionResult(BaseModel):
+    approval_id: str
+    status: Literal["approved", "rejected"]
+    tool_name: str
+    expires_at: str
+
+
 class CompareRunsRequest(BaseModel):
     project: str | None = None
     metric: str | None = None
@@ -67,6 +91,8 @@ class AgentResponse(BaseModel):
     memory_used: str | None = None
     latency_ms: float | None = None
     grounded: bool = True
+    approval_required: ToolApprovalRequest | None = None
+    approval_receipt: str | None = None
 
 
 class ChatRequest(BaseModel):
@@ -74,6 +100,7 @@ class ChatRequest(BaseModel):
     question: str
     project: str | None = None
     generate_report: bool = False
+    approval_id: str | None = None
 
 
 class ChatSessionMessage(BaseModel):

@@ -3,10 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+import re
 
 from jinja2 import Template
 
 from app.models.schemas import ReportArtifact, SourceChunk
+from app.agent.tool_policy import confined_path
 
 
 HTML_TEMPLATE = Template(
@@ -49,11 +51,11 @@ class ReportGenerator:
 
     def generate(self, *, question: str, summary: str, sources: list[SourceChunk], title: str) -> ReportArtifact:
         timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-        stem = "_".join(title.lower().split())[:48]
+        stem = re.sub(r"[^a-z0-9_-]+", "_", title.lower()).strip("_")[:48] or "report"
         report_dir = self.output_dir / "generated"
         report_dir.mkdir(parents=True, exist_ok=True)
-        markdown_path = report_dir / f"{timestamp}_{stem}.md"
-        html_path = report_dir / f"{timestamp}_{stem}.html"
+        markdown_path = confined_path(report_dir, f"{timestamp}_{stem}.md", filename_only=True)
+        html_path = confined_path(report_dir, f"{timestamp}_{stem}.html", filename_only=True)
 
         markdown = [
             f"# {title}",

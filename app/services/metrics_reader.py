@@ -6,6 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 from app.models.schemas import MetricsTablePreview
+from app.agent.tool_policy import confined_path
 from app.retrieval.ingest import infer_project
 
 
@@ -20,7 +21,7 @@ class MetricsReader:
         return [path for path in paths if infer_project(path) == project]
 
     def load_table(self, table_name: str) -> tuple[Path, pd.DataFrame]:
-        path = self.data_dir / "csv" / table_name
+        path = confined_path(self.data_dir / "csv", table_name, filename_only=True)
         if not path.exists():
             raise FileNotFoundError(f"Metrics table not found: {table_name}")
         return path, pd.read_csv(path)

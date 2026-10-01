@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="300" viewBox="0 0 840 300" role="img" aria-labelledby="title desc">
+  <title id="title">Tool policy benchmark</title>
+  <desc id="desc">Exact-intent approval passes 12 of 12 cases. Tool-name-only approval passes 5 of 12 cases.</desc>
+  <rect width="840" height="300" rx="24" fill="#071525"/>
+  <text x="52" y="55" fill="#f4f8fb" font-family="Arial, sans-serif" font-size="26" font-weight="700">Intent-bound tool approval</text>
+  <text x="52" y="84" fill="#9fb3c8" font-family="Arial, sans-serif" font-size="15">Deterministic synthetic safety corpus, 12 cases</text>
+  <text x="52" y="132" fill="#d9e4ee" font-family="Arial, sans-serif" font-size="16">Tool name only</text>
+  <rect x="220" y="111" width="520" height="28" rx="8" fill="#183047"/>
+  <rect x="220" y="111" width="216.7" height="28" rx="8" fill="#f3a85b"/>
+  <text x="756" y="132" fill="#f4f8fb" font-family="Arial, sans-serif" font-size="16" text-anchor="end">5/12</text>
+  <text x="52" y="190" fill="#d9e4ee" font-family="Arial, sans-serif" font-size="16">Exact intent</text>
+  <rect x="220" y="169" width="520" height="28" rx="8" fill="#183047"/>
+  <rect x="220" y="169" width="520.0" height="28" rx="8" fill="#3dd6a0"/>
+  <text x="756" y="190" fill="#f4f8fb" font-family="Arial, sans-serif" font-size="16" text-anchor="end">12/12</text>
+  <text x="52" y="244" fill="#9fb3c8" font-family="Arial, sans-serif" font-size="14">Checks argument mutation, replay, session scope, expiry, policy drift, and path containment.</text>
+  <text x="52" y="269" fill="#71879d" font-family="Arial, sans-serif" font-size="12">Synthetic regression evidence, not a penetration test or production security certification.</text>
+</svg>

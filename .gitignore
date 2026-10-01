@@ -8,4 +8,5 @@ artifacts/generated/
 artifacts/generated/*.db
 app.db
 *.egg-info/
+dist/
 .streamlit/

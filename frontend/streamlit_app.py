@@ -63,10 +63,45 @@ with left:
         response = requests.post(f"{API_URL}/api/chat", json=payload, timeout=120)
         response.raise_for_status()
         st.session_state["last_response"] = response.json()
+        st.session_state["last_payload"] = payload
 
     result = st.session_state.get("last_response")
     if result:
         st.subheader("Response")
+        approval = result.get("approval_required")
+        if approval:
+            st.warning("Report generation is paused for exact-intent approval.")
+            st.json(
+                {
+                    "tool": approval["tool_name"],
+                    "project": approval.get("project"),
+                    "arguments": approval["arguments"],
+                    "expires_at": approval["expires_at"],
+                    "invocation_digest": approval["invocation_digest"],
+                }
+            )
+            approve_col, reject_col = st.columns(2)
+            if approve_col.button("Approve exact call", type="primary"):
+                decision = requests.post(
+                    f"{API_URL}/api/tool-policy/approvals/{approval['approval_id']}",
+                    json={"session_id": session_id, "decision": "approve"},
+                    timeout=20,
+                )
+                decision.raise_for_status()
+                retry_payload = dict(st.session_state["last_payload"])
+                retry_payload["approval_id"] = approval["approval_id"]
+                retried = requests.post(f"{API_URL}/api/chat", json=retry_payload, timeout=120)
+                retried.raise_for_status()
+                st.session_state["last_response"] = retried.json()
+                st.rerun()
+            if reject_col.button("Reject call"):
+                decision = requests.post(
+                    f"{API_URL}/api/tool-policy/approvals/{approval['approval_id']}",
+                    json={"session_id": session_id, "decision": "reject"},
+                    timeout=20,
+                )
+                decision.raise_for_status()
+                st.info("The pending report call was rejected. No report was written.")
         st.write(result["answer"])
         if result.get("report"):
             st.success(f"Report generated: {result['report']['markdown_path']}")
