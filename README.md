@@ -4,6 +4,8 @@
 
 ![Project banner](docs/graphics/project_banner.png)
 
+![Grounding integrity benchmark](docs/graphics/grounding-integrity-v1.svg)
+
 ![Exact-intent tool policy benchmark](docs/graphics/tool-policy-benchmark.svg)
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
@@ -12,7 +14,7 @@
 ![RAG](https://img.shields.io/badge/RAG-grounded-orange)
 ![Evaluation](https://img.shields.io/badge/Eval-25%2F25%20questions-success)
 
-An agent workspace for researchers and engineers who want more than a chatbot. This project answers questions over experiment reports, CSV metrics, and logs; compares runs across projects; generates grounded reports; keeps session memory in SQLite; and returns cited source chunks with every answer. Report writes now pause behind an exact-intent, single-use approval boundary.
+An agent workspace for researchers and engineers who want more than a chatbot. This project answers questions over experiment reports, CSV metrics, and logs; compares runs across projects; generates grounded reports; keeps session memory in SQLite; and returns cited source chunks with every answer. Each sourced response now includes a content-addressed grounding receipt that binds the query, exact chunk digests, retrieval order, scores, and citation tokens. Report writes pause behind an exact-intent, single-use approval boundary.
 
 The corpus is built from real outputs generated in other showcase repos:
 
@@ -27,6 +29,7 @@ The corpus is built from real outputs generated in other showcase repos:
 - It is grounded in real experiment artifacts instead of toy text files.
 - It ships with an evaluation harness and benchmark question set, not just a demo.
 - Its write tool is governed by a visible policy, exact server-held arguments, project scope, expiry, one-time consumption, and an audit trail.
+- Its citations resolve to exact content digests instead of relying on filenames alone.
 
 ## What It Does
 
@@ -37,6 +40,20 @@ The corpus is built from real outputs generated in other showcase repos:
 - `show_confusion_matrix`: surface artifact paths for relevant confusion matrices
 - `summarize_failures`: extract failure-pattern summaries from benchmark docs
 - `generate_report`: write Markdown and HTML only after exact-intent approval
+
+## Grounding Receipts
+
+Every sourced API response includes:
+
+- canonical repository-relative source URIs;
+- stable chunk and content SHA-256 digests;
+- ordered citation tokens such as `[S1]` and `[S2]`;
+- a versioned receipt ID over the normalized query and ordered evidence;
+- a citation-integrity audit that detects missing or unknown answer tokens.
+
+The offline verifier can compare a saved receipt with newly retrieved chunks and identify missing evidence, content mutation, URI substitution, rank changes, score changes, unexpected chunks, and query changes. The receipt is deterministic and unsigned. It proves evidence identity and order, not who produced the receipt.
+
+Citation integrity is not semantic faithfulness. A valid receipt does not prove that arbitrary generated prose is entailed by a source, that the source is true, or that the retrieval set is complete. Those broader questions still require task-specific evaluation and, where appropriate, human review or carefully validated semantic judges.
 
 ## Tool Policy and Approval Flow
 
@@ -75,6 +92,15 @@ The new `tool-policy-safety-v1` corpus contains twelve deterministic cases.
 
 The corpus targets implemented controls and is not an independent penetration test or production security certification.
 
+The `grounding-integrity-v1` corpus contains twelve deterministic evidence mutations.
+
+| Evaluator | Correct cases | Accuracy |
+|---|---:|---:|
+| Filename-only baseline | 2 / 12 | 16.67% |
+| Content-addressed grounding receipt | 12 / 12 | 100% |
+
+The receipt corpus is synthetic and implementation-aligned. It tests exact evidence identity and order, not semantic entailment, general RAG quality, or production adoption.
+
 Full outputs:
 
 - [Evaluation summary](artifacts/generated/evaluation_summary.md)
@@ -105,6 +131,8 @@ flowchart LR
     F --> I["CSV + Log Readers"]
     C --> J["SQLite Session Memory"]
     C --> K["Grounded Response + Sources"]
+    K --> O["Content-Addressed Receipt"]
+    O --> P["Citation Integrity Audit"]
     K --> L["Streamlit UI"]
     C --> M["Tool Policy"]
     M --> N["Human Approval"]
@@ -172,6 +200,7 @@ python -m venv .venv_run
 ```bash
 .venv_run\Scripts\python scripts/build_demo_assets.py
 .venv_run\Scripts\python -m scripts.evaluate_tool_policy --json artifacts/generated/tool-policy-benchmark.json --svg docs/graphics/tool-policy-benchmark.svg
+.venv_run\Scripts\python -m scripts.evaluate_grounding_integrity --json docs/experiments/grounding-integrity-v1-results.json --svg docs/graphics/grounding-integrity-v1.svg
 ```
 
 ## Approval API Example
@@ -202,11 +231,12 @@ curl -X POST http://127.0.0.1:8000/api/chat ^
 
 Current deterministic validation:
 
-- `pytest`: `18 passed`
+- `pytest`: `22 passed`
 - `uvicorn --help`: passed
 - demo asset build: passed
 - evaluation benchmark: `25 / 25` grounded benchmark questions correct
 - tool policy corpus: exact intent `12 / 12`; tool-name baseline `5 / 12`
+- grounding integrity corpus: receipts `12 / 12`; filename-only baseline `2 / 12`
 
 ## Best Files To Open First
 
@@ -223,20 +253,24 @@ This repo is intentionally optimized for reproducibility and grounded outputs. T
 
 The tool policy is provider-neutral application code. It was influenced by current approval and tool-safety guidance from OpenAI Agents SDK, Pydantic AI, LangChain and LangGraph, and the Model Context Protocol specification. No upstream code was copied. See the [dated reference review](docs/notes/2026-10-01-tool-policy-reference-review.md).
 
+The grounding receipt is also provider-neutral application code. Ragas, DeepEval, TruLens, Applied ML, and the original Google production-data paper informed the comparison and problem framing. No upstream code or prompts were copied. See the [grounding reference review](docs/notes/2026-10-08-grounding-receipts-reference-review.md).
+
 ## Limitations
 
 - The checked-in benchmark is a compact deterministic evaluation over bundled artifacts, not evidence of general agent reliability.
 - Retrieval quality depends on document formatting and the included TF-IDF representation.
+- Grounding receipts are unsigned local integrity records. They do not provide authenticity, authorization, non-repudiation, semantic entailment, source truth, or retrieval completeness.
+- The twelve-case grounding corpus is synthetic and implementation-aligned. It does not measure general citation quality or adversarial robustness.
 - The default path does not evaluate adversarial instructions, multi-user isolation, long-running orchestration, or production access controls.
 - External-model behavior and cost are not covered by the offline test suite.
 - The approval endpoint does not authenticate a person. A public or shared deployment still needs authentication, authorization, CSRF protection where applicable, and transport security.
 - Pending approvals are in process memory and fail closed across restart; the JSONL log is evidence, not resumable authority.
-- Version 0.2 gates one filesystem write tool. It does not sandbox arbitrary code, networks, shell tools, or external MCP servers.
+- Version 0.3 gates one filesystem write tool. It does not sandbox arbitrary code, networks, shell tools, or external MCP servers.
 - The twelve-case policy corpus is synthetic, implementation-aligned regression evidence.
 
 ## Best Next Improvement
 
-Add an authenticated reviewer identity and durable compare-and-swap approval store, then stress concurrent approve, reject, consume, expiry, and restart races with an independently authored corpus.
+Add a claim-level semantic support evaluator that preserves the deterministic receipt as the identity layer, then compare local natural-language-inference and optional judge models on an independently authored citation corpus with human labels.
 
 ## Project Records
 
@@ -246,6 +280,12 @@ Add an authenticated reviewer identity and durable compare-and-swap approval sto
 - [Policy corpus dataset card](docs/datasets/tool-policy-safety-v1.md)
 - [Model and provider card](docs/models/2026-10-01-model-provider-card.md)
 - [Verification record](docs/experiments/2026-10-01-tool-policy-verification.md)
+- [Approved grounding receipt spec](docs/superpowers/specs/2026-10-08-content-addressed-grounding-receipts.md)
+- [Grounding reference comparison](docs/notes/2026-10-08-grounding-receipts-reference-review.md)
+- [Grounding integrity corpus card](docs/datasets/grounding-integrity-v1.md)
+- [Grounding receipt decision](docs/decisions/2026-10-08-content-addressed-grounding-receipts.md)
+- [Grounding model boundary](docs/models/2026-10-08-grounding-receipt-model-card.md)
+- [Grounding verification record](docs/experiments/2026-10-08-grounding-receipts-verification.md)
 
 ## License
 

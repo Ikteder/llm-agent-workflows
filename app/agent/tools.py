@@ -3,7 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.models.schemas import CompareRunsRequest, MetricsTablePreview, ReportArtifact, SourceChunk
+from app.models.schemas import (
+    CompareRunsRequest,
+    MetricsTablePreview,
+    ReportArtifact,
+    SourceChunk,
+)
 from app.retrieval.ingest import infer_project
 from app.retrieval.vector_store import InMemoryVectorStore
 from app.services.compare_runs import RunComparator

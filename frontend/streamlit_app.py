@@ -103,6 +103,16 @@ with left:
                 decision.raise_for_status()
                 st.info("The pending report call was rejected. No report was written.")
         st.write(result["answer"])
+        integrity = result.get("citation_integrity")
+        receipt = result.get("grounding_receipt")
+        if integrity and integrity["status"] == "verified":
+            receipt_id = receipt["receipt_id"] if receipt else "not applicable"
+            st.caption(
+                f"Citation integrity verified for {integrity['source_count']} source(s). "
+                f"Receipt: {receipt_id}"
+            )
+        elif integrity and integrity["status"] == "failed":
+            st.warning(f"Citation integrity failed: {', '.join(integrity['findings'])}")
         if result.get("report"):
             st.success(f"Report generated: {result['report']['markdown_path']}")
         st.caption(f"Intent: {result['intent']} | Latency: {result.get('latency_ms', 0):.1f} ms")
@@ -112,8 +122,13 @@ with right:
     result = st.session_state.get("last_response")
     if result and result.get("sources"):
         for source in result["sources"]:
-            with st.expander(Path(source["path"]).name):
+            citation = source.get("citation_id") or "source"
+            with st.expander(f"[{citation}] {Path(source['path']).name}"):
                 st.code(source["path"])
+                if source.get("source_uri"):
+                    st.caption(
+                        f"{source['source_uri']} | sha256:{(source.get('content_sha256') or '')[:12]}"
+                    )
                 st.write(source["content"])
     else:
         st.info("Ask a question to see grounded source chunks.")

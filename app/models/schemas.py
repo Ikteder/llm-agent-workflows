@@ -12,7 +12,39 @@ class SourceChunk(BaseModel):
     kind: str
     content: str
     score: float | None = None
+    source_uri: str | None = None
+    content_sha256: str | None = None
+    retrieval_rank: int | None = None
+    citation_id: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class GroundingCitation(BaseModel):
+    citation_id: str
+    chunk_id: str
+    source_uri: str
+    project: str
+    kind: str
+    content_sha256: str
+    retrieval_rank: int
+    score: float | None = None
+
+
+class GroundingReceipt(BaseModel):
+    schema_version: Literal["1"] = "1"
+    receipt_id: str
+    query_sha256: str
+    evidence_sha256: str
+    citations: list[GroundingCitation] = Field(default_factory=list)
+
+
+class CitationIntegrityAudit(BaseModel):
+    status: Literal["verified", "failed", "not_applicable"]
+    source_count: int
+    citations_found: list[str] = Field(default_factory=list)
+    resolved_citations: list[str] = Field(default_factory=list)
+    unresolved_citations: list[str] = Field(default_factory=list)
+    findings: list[str] = Field(default_factory=list)
 
 
 class ToolCall(BaseModel):
@@ -91,6 +123,8 @@ class AgentResponse(BaseModel):
     memory_used: str | None = None
     latency_ms: float | None = None
     grounded: bool = True
+    grounding_receipt: GroundingReceipt | None = None
+    citation_integrity: CitationIntegrityAudit | None = None
     approval_required: ToolApprovalRequest | None = None
     approval_receipt: str | None = None
 

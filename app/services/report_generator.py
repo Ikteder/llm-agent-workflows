@@ -1,15 +1,14 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-import re
 
 from jinja2 import Template
 
-from app.models.schemas import ReportArtifact, SourceChunk
 from app.agent.tool_policy import confined_path
-
+from app.models.schemas import ReportArtifact, SourceChunk
 
 HTML_TEMPLATE = Template(
     """

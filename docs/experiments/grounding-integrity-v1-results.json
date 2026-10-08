@@ -1,0 +1,155 @@
+{
+  "schema_version": "1",
+  "corpus": "grounding-integrity-v1",
+  "case_count": 12,
+  "filename_only_correct": 2,
+  "receipt_correct": 12,
+  "results": [
+    {
+      "id": "valid",
+      "mutation": "none",
+      "expected_valid": true,
+      "filename_only_prediction": true,
+      "receipt_prediction": true,
+      "filename_only_correct": true,
+      "receipt_correct": true,
+      "findings": []
+    },
+    {
+      "id": "content-tamper",
+      "mutation": "content",
+      "expected_valid": false,
+      "filename_only_prediction": true,
+      "receipt_prediction": false,
+      "filename_only_correct": false,
+      "receipt_correct": true,
+      "findings": [
+        "CONTENT_DIGEST_MISMATCH:S1"
+      ]
+    },
+    {
+      "id": "missing-source",
+      "mutation": "missing",
+      "expected_valid": false,
+      "filename_only_prediction": false,
+      "receipt_prediction": false,
+      "filename_only_correct": true,
+      "receipt_correct": true,
+      "findings": [
+        "MISSING_CHUNK:S1",
+        "RETRIEVAL_RANK_MISMATCH:S2"
+      ]
+    },
+    {
+      "id": "rank-reorder",
+      "mutation": "reorder",
+      "expected_valid": false,
+      "filename_only_prediction": true,
+      "receipt_prediction": false,
+      "filename_only_correct": false,
+      "receipt_correct": true,
+      "findings": [
+        "RETRIEVAL_RANK_MISMATCH:S1",
+        "RETRIEVAL_RANK_MISMATCH:S2"
+      ]
+    },
+    {
+      "id": "uri-substitution",
+      "mutation": "uri",
+      "expected_valid": false,
+      "filename_only_prediction": true,
+      "receipt_prediction": false,
+      "filename_only_correct": false,
+      "receipt_correct": true,
+      "findings": [
+        "SOURCE_URI_MISMATCH:S1"
+      ]
+    },
+    {
+      "id": "unexpected-source",
+      "mutation": "extra",
+      "expected_valid": false,
+      "filename_only_prediction": true,
+      "receipt_prediction": false,
+      "filename_only_correct": false,
+      "receipt_correct": true,
+      "findings": [
+        "UNEXPECTED_CHUNK"
+      ]
+    },
+    {
+      "id": "query-substitution",
+      "mutation": "query",
+      "expected_valid": false,
+      "filename_only_prediction": true,
+      "receipt_prediction": false,
+      "filename_only_correct": false,
+      "receipt_correct": true,
+      "findings": [
+        "QUERY_DIGEST_MISMATCH"
+      ]
+    },
+    {
+      "id": "receipt-id-tamper",
+      "mutation": "receipt_id",
+      "expected_valid": false,
+      "filename_only_prediction": true,
+      "receipt_prediction": false,
+      "filename_only_correct": false,
+      "receipt_correct": true,
+      "findings": [
+        "RECEIPT_ID_MISMATCH"
+      ]
+    },
+    {
+      "id": "evidence-digest-tamper",
+      "mutation": "evidence_digest",
+      "expected_valid": false,
+      "filename_only_prediction": true,
+      "receipt_prediction": false,
+      "filename_only_correct": false,
+      "receipt_correct": true,
+      "findings": [
+        "EVIDENCE_DIGEST_MISMATCH",
+        "RECEIPT_ID_MISMATCH"
+      ]
+    },
+    {
+      "id": "duplicate-chunk",
+      "mutation": "duplicate",
+      "expected_valid": false,
+      "filename_only_prediction": true,
+      "receipt_prediction": false,
+      "filename_only_correct": false,
+      "receipt_correct": true,
+      "findings": [
+        "DUPLICATE_CURRENT_CHUNK"
+      ]
+    },
+    {
+      "id": "retrieval-score-tamper",
+      "mutation": "score",
+      "expected_valid": false,
+      "filename_only_prediction": true,
+      "receipt_prediction": false,
+      "filename_only_correct": false,
+      "receipt_correct": true,
+      "findings": [
+        "RETRIEVAL_SCORE_MISMATCH:S1"
+      ]
+    },
+    {
+      "id": "citation-token-tamper",
+      "mutation": "citation",
+      "expected_valid": false,
+      "filename_only_prediction": true,
+      "receipt_prediction": false,
+      "filename_only_correct": false,
+      "receipt_correct": true,
+      "findings": [
+        "CITATION_RANK_BINDING_MISMATCH",
+        "EVIDENCE_DIGEST_MISMATCH"
+      ]
+    }
+  ]
+}

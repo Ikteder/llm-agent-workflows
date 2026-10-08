@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import re
 from pathlib import Path
 
 from app.models.schemas import ProjectFile, ProjectSummary, SourceChunk
-
 
 PROJECT_DESCRIPTIONS = {
     "predictive_maintenance": "Early-warning predictive maintenance, drift detection, and operator-facing summaries.",
@@ -98,10 +98,17 @@ def load_text_chunks(path: Path) -> list[str]:
     return split_markdown(text)
 
 
+def _normalized_text(value: str) -> str:
+    return value.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _sha256(value: str) -> str:
+    return hashlib.sha256(_normalized_text(value).encode("utf-8")).hexdigest()
+
+
 def build_corpus(data_dir: Path) -> tuple[list[SourceChunk], list[ProjectSummary]]:
     chunks: list[SourceChunk] = []
     project_files: dict[str, list[ProjectFile]] = {}
-    chunk_counter = 0
     for path in sorted(data_dir.rglob("*")):
         if not path.is_file():
             continue
@@ -121,16 +128,24 @@ def build_corpus(data_dir: Path) -> tuple[list[SourceChunk], list[ProjectSummary
         project_files.setdefault(project, []).append(
             ProjectFile(project=project, kind=kind, path=str(path), label=path.name)
         )
-        for part in load_text_chunks(path):
-            chunk_counter += 1
+        try:
+            source_uri = path.relative_to(data_dir.parent).as_posix()
+        except ValueError:
+            source_uri = path.name
+        for part_index, part in enumerate(load_text_chunks(path), start=1):
+            normalized_part = _normalized_text(part)
+            content_sha256 = _sha256(normalized_part)
+            stable_key = f"{source_uri}\n{part_index}\n{content_sha256}"
             chunks.append(
                 SourceChunk(
-                    chunk_id=f"chunk-{chunk_counter:04d}",
+                    chunk_id=f"chunk-{_sha256(stable_key)[:20]}",
                     project=project,
                     path=str(path),
                     kind=kind,
-                    content=part,
-                    metadata={"label": path.name},
+                    content=normalized_part,
+                    source_uri=source_uri,
+                    content_sha256=content_sha256,
+                    metadata={"label": path.name, "part_index": part_index},
                 )
             )
 

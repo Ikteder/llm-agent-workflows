@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="360" viewBox="0 0 760 360" role="img" aria-labelledby="title desc">
+  <title id="title">Grounding integrity benchmark</title>
+  <desc id="desc">Filename-only baseline correctly classified 2 of 12 cases. Content-addressed receipts correctly classified 12 of 12 cases.</desc>
+  <rect width="760" height="360" rx="24" fill="#f4f7fb"/>
+  <text x="52" y="64" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#15324b">Grounding integrity benchmark</text>
+  <text x="52" y="94" font-family="Arial, sans-serif" font-size="15" fill="#536779">Synthetic mutation detection, v1</text>
+  <text x="52" y="148" font-family="Arial, sans-serif" font-size="17" fill="#20384d">Filename-only baseline</text>
+  <rect x="250" y="126" width="440" height="28" rx="14" fill="#dce5ed"/>
+  <rect x="250" y="126" width="73" height="28" rx="14" fill="#d47a3f"/>
+  <text x="704" y="147" font-family="Arial, sans-serif" font-size="17" text-anchor="end" fill="#20384d">2/12</text>
+  <text x="52" y="218" font-family="Arial, sans-serif" font-size="17" fill="#20384d">Grounding receipts</text>
+  <rect x="250" y="196" width="440" height="28" rx="14" fill="#dce5ed"/>
+  <rect x="250" y="196" width="440" height="28" rx="14" fill="#2a8066"/>
+  <text x="675" y="217" font-family="Arial, sans-serif" font-size="17" text-anchor="end" fill="#ffffff">12/12</text>
+  <text x="52" y="284" font-family="Arial, sans-serif" font-size="15" fill="#536779">Checks exact query, source URI, content digest, rank, score, and receipt identity.</text>
+  <text x="52" y="311" font-family="Arial, sans-serif" font-size="14" fill="#6d7f8e">Integrity evidence only. This does not prove semantic entailment or truth.</text>
+</svg>

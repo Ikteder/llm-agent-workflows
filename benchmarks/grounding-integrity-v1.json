@@ -1,0 +1,19 @@
+{
+  "schema_version": "1",
+  "name": "grounding-integrity-v1",
+  "description": "Synthetic application-owned cases for exact evidence identity, order, and citation receipt integrity.",
+  "cases": [
+    {"id": "valid", "mutation": "none", "expected_valid": true},
+    {"id": "content-tamper", "mutation": "content", "expected_valid": false},
+    {"id": "missing-source", "mutation": "missing", "expected_valid": false},
+    {"id": "rank-reorder", "mutation": "reorder", "expected_valid": false},
+    {"id": "uri-substitution", "mutation": "uri", "expected_valid": false},
+    {"id": "unexpected-source", "mutation": "extra", "expected_valid": false},
+    {"id": "query-substitution", "mutation": "query", "expected_valid": false},
+    {"id": "receipt-id-tamper", "mutation": "receipt_id", "expected_valid": false},
+    {"id": "evidence-digest-tamper", "mutation": "evidence_digest", "expected_valid": false},
+    {"id": "duplicate-chunk", "mutation": "duplicate", "expected_valid": false},
+    {"id": "retrieval-score-tamper", "mutation": "score", "expected_valid": false},
+    {"id": "citation-token-tamper", "mutation": "citation", "expected_valid": false}
+  ]
+}

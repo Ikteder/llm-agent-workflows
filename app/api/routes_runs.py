@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 
-from app.models.schemas import CompareRunsRequest, CompareRunsResult, MetricsTablePreview, ProjectSummary
+from app.models.schemas import (
+    CompareRunsRequest,
+    CompareRunsResult,
+    MetricsTablePreview,
+    ProjectSummary,
+)
 
 
 def build_runs_router() -> APIRouter:

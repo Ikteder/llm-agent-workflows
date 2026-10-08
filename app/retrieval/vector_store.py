@@ -43,8 +43,10 @@ class InMemoryVectorStore:
         ranked = sorted(zip(candidate_indexes, scores), key=lambda item: item[1], reverse=True)[:limit]
 
         results: list[SourceChunk] = []
-        for index, score in ranked:
+        for rank, (index, score) in enumerate(ranked, start=1):
             chunk = self.chunks[index].model_copy(deep=True)
             chunk.score = float(score)
+            chunk.retrieval_rank = rank
+            chunk.citation_id = f"S{rank}"
             results.append(chunk)
         return results

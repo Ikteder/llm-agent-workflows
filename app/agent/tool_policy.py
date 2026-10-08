@@ -12,7 +12,6 @@ from typing import Any, Literal
 
 from app.models.schemas import ToolApprovalRequest
 
-
 POLICY_VERSION = "2026-10-01.v1"
 
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-agent-workflows"
-version = "0.2.0"
+version = "0.3.0"
 description = "An experiment and knowledge workflow agent over research artifacts, logs, and metrics."
 requires-python = ">=3.11"
 dependencies = [

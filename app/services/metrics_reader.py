@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from app.models.schemas import MetricsTablePreview
 from app.agent.tool_policy import confined_path
+from app.models.schemas import MetricsTablePreview
 from app.retrieval.ingest import infer_project
 
 

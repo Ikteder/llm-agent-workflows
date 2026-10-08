@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import time
 from dataclasses import dataclass
@@ -7,6 +8,7 @@ from pathlib import Path
 
 from app.agent.memory import SessionMemory
 from app.agent.prompts import SYSTEM_PROMPT
+from app.agent.tool_policy import ToolInvocation, ToolPolicyEngine
 from app.agent.tools import (
     ToolContext,
     compare_runs,
@@ -17,9 +19,19 @@ from app.agent.tools import (
     show_confusion_matrix,
     summarize_failures,
 )
-from app.agent.tool_policy import ToolInvocation, ToolPolicyEngine
-from app.models.schemas import AgentResponse, ChatRequest, ReportArtifact, SourceChunk, ToolCall
-
+from app.models.schemas import (
+    AgentResponse,
+    ChatRequest,
+    ReportArtifact,
+    SourceChunk,
+    ToolCall,
+)
+from app.retrieval.provenance import (
+    audit_answer_citations,
+    bind_sources,
+    create_grounding_receipt,
+    ensure_answer_citations,
+)
 
 PROJECT_KEYWORDS = {
     "predictive_maintenance": ["predictive maintenance", "drift", "sensor", "early warning", "maintenance"],
@@ -148,7 +160,7 @@ def _call_openai_if_available(question: str, memory_context: str, tool_context: 
             ],
         )
         return response.output_text
-    except Exception:
+    except Exception:  # noqa: BLE001 - optional provider failures fall back to deterministic output
         return None
 
 
@@ -194,7 +206,9 @@ class AgentWorkflow:
         approval_receipt = None
 
         def create_report_with_policy(title: str) -> ReportArtifact | None:
-            nonlocal approval_required, approval_receipt
+            nonlocal answer, approval_required, approval_receipt, sources
+            sources = bind_sources(sources[:8])
+            answer = ensure_answer_citations(answer, sources)
             source_bindings = [source.model_dump(mode="json") for source in sources[:6]]
             arguments = {
                 "title": title,
@@ -282,13 +296,20 @@ class AgentWorkflow:
                 )
             )
             for source_file in result.source_files[:3]:
+                source_name = Path(source_file).name
+                source_rows = [
+                    row for row in result.rows if Path(str(row.get("source_file", ""))).name == source_name
+                ]
+                if not source_rows:
+                    continue
                 sources.append(
                     SourceChunk(
                         chunk_id=f"source-{len(sources) + 1}",
                         project=project or "shared",
                         path=source_file,
                         kind="csv",
-                        content=f"Derived comparison rows from {Path(source_file).name}",
+                        content=json.dumps(source_rows[:4], sort_keys=True, default=str),
+                        source_uri=f"data/csv/{source_name}",
                     )
                 )
             if result.rows and result.metric_used:
@@ -351,6 +372,7 @@ class AgentWorkflow:
                         path=previews[0].path,
                         kind="csv",
                         content=f"Verification table columns: {previews[0].columns}",
+                        source_uri=f"data/csv/{Path(previews[0].path).name}",
                     )
                 )
             if doc_hits:
@@ -374,6 +396,7 @@ class AgentWorkflow:
                     path=str(path),
                     kind="csv",
                     content=f"Verification table loaded from {Path(path).name}",
+                    source_uri=f"data/csv/{Path(path).name}",
                 )
             )
             matching = frame
@@ -443,6 +466,17 @@ class AgentWorkflow:
             )
             if matches:
                 answer = "Available confusion matrices:\n" + "\n".join(f"- `{path}`" for path in matches)
+                sources = [
+                    SourceChunk(
+                        chunk_id=f"artifact-{index}",
+                        project=project,
+                        path=path,
+                        kind="artifact",
+                        content=f"Confusion matrix artifact: {Path(path).name}",
+                        source_uri=f"data/artifacts/{Path(path).name}",
+                    )
+                    for index, path in enumerate(matches, start=1)
+                ]
             else:
                 answer = "I could not find a confusion matrix artifact for that project."
 
@@ -499,6 +533,7 @@ class AgentWorkflow:
                             path=preview.path,
                             kind="csv",
                             content=f"Preview from {preview.name}: {preview.preview[:2]}",
+                            source_uri=f"data/csv/{Path(preview.path).name}",
                         )
                     )
             else:
@@ -524,14 +559,17 @@ class AgentWorkflow:
             )
             answer = _extractive_summary(request.question, sources)
 
+        sources = bind_sources(sources[:8])
         memory_context = self.memory.recent_context(request.session_id)
         llm_tool_context = "\n\n".join(
-            [f"{source.path}\n{source.content}" for source in sources[:6]]
+            [f"[{source.citation_id}] {source.source_uri}\n{source.content}" for source in sources[:6]]
             + [call.summary for call in tools_used]
         )
         openai_answer = _call_openai_if_available(request.question, memory_context, llm_tool_context)
         if openai_answer:
             answer = openai_answer
+
+        answer = ensure_answer_citations(answer, sources)
 
         if request.generate_report and report is None and approval_required is None:
             report = create_report_with_policy(f"{(project or 'cross_project').replace('_', ' ').title()} chat report")
@@ -544,6 +582,8 @@ class AgentWorkflow:
         self.memory.append(request.session_id, "assistant", answer)
 
         latency_ms = (time.perf_counter() - started) * 1000.0
+        grounding_receipt = create_grounding_receipt(request.question, sources)
+        citation_integrity = audit_answer_citations(answer, sources)
         return AgentResponse(
             session_id=request.session_id,
             question=request.question,
@@ -551,11 +591,13 @@ class AgentWorkflow:
             project=project,
             intent=intent,
             tools_used=tools_used,
-            sources=sources[:8],
+            sources=sources,
             report=report,
             memory_used=memory_context or None,
             latency_ms=latency_ms,
             grounded=bool(sources or "compare_runs" in intent or "metrics" in intent or "artifact" in intent),
+            grounding_receipt=grounding_receipt,
+            citation_integrity=citation_integrity,
             approval_required=approval_required,
             approval_receipt=approval_receipt,
         )
