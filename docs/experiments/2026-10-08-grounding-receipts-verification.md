@@ -47,6 +47,9 @@ This is implementation-aligned mutation evidence. It is not a semantic citation 
 - SVG XML parsing, secret-pattern scan, Git whitespace check, and README em-dash count all passed. README em-dash count: 0.
 - Browser QA: the live Streamlit query displayed a resolvable receipt and cited-source tokens. At a 390 by 844 viewport, document `scrollWidth` equaled `clientWidth` at 390 pixels and the receipt remained visible. The sidebar collapsed correctly. Captured browser warnings and errors: 0.
 - Visual QA: the generated SVG rendered its accessible title, 2/12 baseline, 12/12 receipt result, and semantic boundary without clipping after one label-contrast correction.
+- Public implementation commit `8f78ed6fbda9dd1f75c334fb5c2a94a6bac36820` was pushed to `main`. GitHub Actions run `37842184215` passed the existing Python 3.12 workflow in 33 seconds.
+- GitHub README QA at 1,265 pixels and a 390 by 844 viewport loaded the banner, grounding SVG, and tool-policy SVG with their expected intrinsic dimensions. The narrow document had `scrollWidth = clientWidth = 375` pixels and retained the Grounding Receipts section.
+- The public repository remained MIT licensed. The raw grounding SVG returned `image/svg+xml`; no upstream pull request was opened.
 
 The machine-readable benchmark output is stored in `grounding-integrity-v1-results.json` in this directory.
 
