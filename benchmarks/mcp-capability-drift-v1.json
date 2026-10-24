@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "name": "mcp-capability-drift-v1",
+  "description": "Authored synthetic changes between external tool review and approval consumption.",
+  "cases": [
+    {"id": "exact", "mutation": "exact", "expected": "matched"},
+    {"id": "object-key-order", "mutation": "object_key_order", "expected": "matched"},
+    {"id": "server-swap", "mutation": "server_id", "expected": "blocked"},
+    {"id": "transport-swap", "mutation": "transport", "expected": "blocked"},
+    {"id": "protocol-change", "mutation": "protocol_version", "expected": "blocked"},
+    {"id": "tool-name-change", "mutation": "tool_name", "expected": "blocked"},
+    {"id": "title-change", "mutation": "title", "expected": "blocked"},
+    {"id": "description-injection", "mutation": "description", "expected": "blocked"},
+    {"id": "input-schema-broadened", "mutation": "input_schema", "expected": "blocked"},
+    {"id": "output-schema-change", "mutation": "output_schema", "expected": "blocked"},
+    {"id": "destructive-hint-change", "mutation": "annotations", "expected": "blocked"},
+    {"id": "execution-mode-change", "mutation": "execution", "expected": "blocked"},
+    {"id": "extension-metadata-change", "mutation": "meta", "expected": "blocked"},
+    {"id": "unknown-contract-field", "mutation": "extra_field", "expected": "blocked"}
+  ]
+}

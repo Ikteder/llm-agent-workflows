@@ -2,6 +2,7 @@
 .venv/
 .venv_run/
 __pycache__/
+build/
 *.pyc
 .pytest_cache/
 artifacts/generated/

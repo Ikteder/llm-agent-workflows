@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="320" viewBox="0 0 900 320" role="img" aria-labelledby="title desc">
+  <title id="title">MCP capability drift benchmark</title>
+  <desc id="desc">Capability-bound approval matches 14 of 14 expected verdicts. Name-and-arguments approval matches 3 of 14.</desc>
+  <rect width="900" height="320" rx="24" fill="#071525"/>
+  <text x="52" y="55" fill="#f4f8fb" font-family="Arial, sans-serif" font-size="26" font-weight="700">Approval must bind the capability</text>
+  <text x="52" y="84" fill="#9fb3c8" font-family="Arial, sans-serif" font-size="15">Authored review-to-execution drift corpus, 14 cases</text>
+  <text x="52" y="140" fill="#d9e4ee" font-family="Arial, sans-serif" font-size="16">Name + arguments</text>
+  <rect x="260" y="118" width="520" height="30" rx="8" fill="#183047"/>
+  <rect x="260" y="118" width="111.4" height="30" rx="8" fill="#f3a85b"/>
+  <text x="805" y="140" fill="#f4f8fb" font-family="Arial, sans-serif" font-size="16" text-anchor="end">3/14</text>
+  <text x="52" y="205" fill="#d9e4ee" font-family="Arial, sans-serif" font-size="16">Capability receipt</text>
+  <rect x="260" y="183" width="520" height="30" rx="8" fill="#183047"/>
+  <rect x="260" y="183" width="520.0" height="30" rx="8" fill="#3dd6a0"/>
+  <text x="805" y="205" fill="#f4f8fb" font-family="Arial, sans-serif" font-size="16" text-anchor="end">14/14</text>
+  <text x="52" y="258" fill="#9fb3c8" font-family="Arial, sans-serif" font-size="14">Binds application server identity, protocol, schemas, description, annotations, execution, and extension metadata.</text>
+  <text x="52" y="286" fill="#71879d" font-family="Arial, sans-serif" font-size="12">Synthetic equality evidence. It does not authenticate a server or authorize the tool's effect.</text>
+</svg>

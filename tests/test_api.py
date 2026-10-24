@@ -86,5 +86,16 @@ def test_tool_policy_manifest_is_explicit(client) -> None:
     response = client.get("/api/tool-policy/manifest")
     assert response.status_code == 200
     payload = response.json()
-    report_policy = next(item for item in payload["tools"] if item["name"] == "generate_report")
-    assert report_policy == {"name": "generate_report", "risk": "write", "requires_approval": True}
+    assert payload["capability_binding"] == {
+        "supported": True,
+        "receipt_schema_version": "1",
+        "consume_requires_fresh_observation": True,
+    }
+    report_policy = next(
+        item for item in payload["tools"] if item["name"] == "generate_report"
+    )
+    assert report_policy == {
+        "name": "generate_report",
+        "risk": "write",
+        "requires_approval": True,
+    }

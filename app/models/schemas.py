@@ -61,6 +61,7 @@ class ToolApprovalRequest(BaseModel):
     policy_version: str
     invocation_digest: str
     arguments: dict[str, Any]
+    capability: dict[str, Any] | None = None
     created_at: str
     expires_at: str
 

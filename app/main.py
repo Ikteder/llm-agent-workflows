@@ -60,7 +60,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title="LLM Agent for Experiment and Knowledge Workflows",
-        version="0.2.0",
+        version="0.4.0",
         description="Grounded Q&A, run comparison, and report generation over experiment artifacts.",
     )
     app.state.container = container

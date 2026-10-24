@@ -6,6 +6,8 @@
 
 ![Grounding integrity benchmark](docs/graphics/grounding-integrity-v1.svg)
 
+![MCP capability drift benchmark](docs/graphics/mcp-capability-drift-v1.svg)
+
 ![Exact-intent tool policy benchmark](docs/graphics/tool-policy-benchmark.svg)
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
@@ -14,7 +16,7 @@
 ![RAG](https://img.shields.io/badge/RAG-grounded-orange)
 ![Evaluation](https://img.shields.io/badge/Eval-25%2F25%20questions-success)
 
-An agent workspace for researchers and engineers who want more than a chatbot. This project answers questions over experiment reports, CSV metrics, and logs; compares runs across projects; generates grounded reports; keeps session memory in SQLite; and returns cited source chunks with every answer. Each sourced response now includes a content-addressed grounding receipt that binds the query, exact chunk digests, retrieval order, scores, and citation tokens. Report writes pause behind an exact-intent, single-use approval boundary.
+An agent workspace for researchers and engineers who want more than a chatbot. This project answers questions over experiment reports, CSV metrics, and logs; compares runs across projects; generates grounded reports; keeps session memory in SQLite; and returns cited source chunks with every answer. Each sourced response includes a content-addressed grounding receipt that binds the query, exact chunk digests, retrieval order, scores, and citation tokens. Report writes pause behind an exact-intent, single-use approval boundary. External MCP-shaped tools can also bind that approval to the reviewed server identity and advertised capability, then fail closed if a fresh observation drifts before execution.
 
 The corpus is built from real outputs generated in other showcase repos:
 
@@ -29,6 +31,7 @@ The corpus is built from real outputs generated in other showcase repos:
 - It is grounded in real experiment artifacts instead of toy text files.
 - It ships with an evaluation harness and benchmark question set, not just a demo.
 - Its write tool is governed by a visible policy, exact server-held arguments, project scope, expiry, one-time consumption, and an audit trail.
+- Its external-tool approval option binds the reviewed capability without copying raw schemas or descriptions into audit logs.
 - Its citations resolve to exact content digests instead of relying on filenames alone.
 
 ## What It Does
@@ -67,6 +70,52 @@ Read tools remain available without interruption. The report tool is different b
 
 This is local application approval, not user authentication or multi-tenant authorization. Put the API behind appropriate identity and transport controls before a network deployment.
 
+## MCP Capability-Bound Approval
+
+MCP permits tool catalogs to change over time. A durable approval that remembers only `tool_name` and arguments can therefore resume against a different server or changed tool definition. The optional `ToolCapability` contract records:
+
+- an application-assigned server ID, transport, and MCP protocol version;
+- the tool name, title, description, input and output schemas;
+- annotations, execution metadata, `_meta`, and unknown public contract fields;
+- content-minimized section and aggregate SHA-256 digests.
+
+When an approved external call resumes, `consume()` requires a fresh observation. Missing or changed evidence denies execution without consuming the approval. Canonical JSON ignores object-key order, but preserves values and array order. Server-provided annotations remain advisory, and the application-assigned server ID must come from trusted configuration.
+
+Use the application-owned policy from Python:
+
+```python
+from pathlib import Path
+
+from app.agent.capability_receipts import ToolCapability
+from app.agent.tool_policy import ToolInvocation, ToolPolicyEngine
+
+# Load server identity and the secret from trusted application configuration.
+def review_call(secret: bytes, listed_tool: dict):
+    policy = ToolPolicyEngine(
+        secret=secret,
+        audit_path=Path("artifacts/generated/capability-audit.jsonl"),
+        allowed_projects={"research"},
+    )
+    reviewed = ToolCapability(
+        server_id="configured-report-server",
+        transport="streamable-http",
+        protocol_version="2026-07-28",
+        tool=listed_tool,
+    )
+    pending = policy.authorize(ToolInvocation(
+        session_id="review-session",
+        tool_name="generate_report",  # Application policy key; may differ from MCP name.
+        arguments={"title": "Reviewed report"},
+        project="research",
+        capability=reviewed,
+    ))
+    return policy, pending.approval_request
+```
+
+Present the application's trusted review UI with the actual tool definition and arguments. After explicit approval, call `policy.decide(approval_id, session_id="review-session", approve=True)`. Re-list the tool through the same authenticated connection and construct a fresh `ToolCapability`. Call `policy.consume(..., observed_capability=fresh)` with the approval ID and the same session, application tool name, and project. Dispatch only when `decision.status == "allowed"`, using `decision.arguments`. The adapter must map the application policy key to the reviewed MCP tool and retain the checked connection through dispatch. The included web report tool uses the local path; an external MCP transport adapter is not included.
+
+This receipt proves equality between two observations. It does not authenticate the server, authorize the user, decide whether a tool is safe, or prove that the implementation follows its advertised schema.
+
 ## Showcase Screens
 
 ![UI showcase](docs/graphics/agent_ui_showcase.png)
@@ -100,6 +149,15 @@ The `grounding-integrity-v1` corpus contains twelve deterministic evidence mutat
 | Content-addressed grounding receipt | 12 / 12 | 100% |
 
 The receipt corpus is synthetic and implementation-aligned. It tests exact evidence identity and order, not semantic entailment, general RAG quality, or production adoption.
+
+The `mcp-capability-drift-v1` corpus contains fourteen deterministic review-to-execution cases.
+
+| Evaluator | Correct cases | Accuracy |
+|---|---:|---:|
+| Name-and-arguments baseline | 3 / 14 | 21.43% |
+| Capability-bound approval | 14 / 14 | 100% |
+
+The corpus includes two safe controls and isolated changes to server identity, transport, protocol, name, descriptions, schemas, annotations, execution metadata, `_meta`, and an unknown contract field. This is authored regression evidence, not a penetration test or production false-positive estimate.
 
 Full outputs:
 
@@ -136,7 +194,8 @@ flowchart LR
     K --> L["Streamlit UI"]
     C --> M["Tool Policy"]
     M --> N["Human Approval"]
-    N --> G
+    N --> Q["Fresh Capability Receipt"]
+    Q --> G
 ```
 
 ## Repository Layout
@@ -201,6 +260,7 @@ python -m venv .venv_run
 .venv_run\Scripts\python scripts/build_demo_assets.py
 .venv_run\Scripts\python -m scripts.evaluate_tool_policy --json artifacts/generated/tool-policy-benchmark.json --svg docs/graphics/tool-policy-benchmark.svg
 .venv_run\Scripts\python -m scripts.evaluate_grounding_integrity --json docs/experiments/grounding-integrity-v1-results.json --svg docs/graphics/grounding-integrity-v1.svg
+.venv_run\Scripts\python -m scripts.evaluate_capability_receipts --json docs/experiments/mcp-capability-drift-v1-results.json --svg docs/graphics/mcp-capability-drift-v1.svg
 ```
 
 ## Approval API Example
@@ -231,18 +291,20 @@ curl -X POST http://127.0.0.1:8000/api/chat ^
 
 Current deterministic validation:
 
-- `pytest`: `22 passed`
+- `pytest`: `42 passed`
 - `uvicorn --help`: passed
 - demo asset build: passed
 - evaluation benchmark: `25 / 25` grounded benchmark questions correct
 - tool policy corpus: exact intent `12 / 12`; tool-name baseline `5 / 12`
 - grounding integrity corpus: receipts `12 / 12`; filename-only baseline `2 / 12`
+- MCP capability drift corpus: receipts `14 / 14`; name-and-arguments baseline `3 / 14`
 
 ## Best Files To Open First
 
 - [FastAPI app entrypoint](app/main.py)
 - [Agent workflow](app/agent/graph.py)
 - [Tool implementations](app/agent/tools.py)
+- [Capability receipts](app/agent/capability_receipts.py)
 - [Retrieval ingestion](app/retrieval/ingest.py)
 - [Evaluation builder](scripts/build_demo_assets.py)
 - [Benchmark set](artifacts/benchmark_questions.json)
@@ -255,6 +317,8 @@ The tool policy is provider-neutral application code. It was influenced by curre
 
 The grounding receipt is also provider-neutral application code. Ragas, DeepEval, TruLens, Applied ML, and the original Google production-data paper informed the comparison and problem framing. No upstream code or prompts were copied. See the [grounding reference review](docs/notes/2026-10-08-grounding-receipts-reference-review.md).
 
+The MCP capability receipt is an independently designed application contract. The MCP specification, OpenAI Agents SDK, Pydantic AI, LangChain, Applied ML, and the original Amazon data-quality work informed the comparison and requirements. No upstream source, fixtures, benchmarks, or prompts were copied. See the [MCP capability reference review](docs/notes/2026-10-23-mcp-capability-reference-review.md).
+
 ## Limitations
 
 - The checked-in benchmark is a compact deterministic evaluation over bundled artifacts, not evidence of general agent reliability.
@@ -265,12 +329,16 @@ The grounding receipt is also provider-neutral application code. Ragas, DeepEval
 - External-model behavior and cost are not covered by the offline test suite.
 - The approval endpoint does not authenticate a person. A public or shared deployment still needs authentication, authorization, CSRF protection where applicable, and transport security.
 - Pending approvals are in process memory and fail closed across restart; the JSONL log is evidence, not resumable authority.
-- Version 0.3 gates one filesystem write tool. It does not sandbox arbitrary code, networks, shell tools, or external MCP servers.
+- Version 0.4 gates one local filesystem write tool and provides an optional external capability-binding contract. It does not implement or sandbox arbitrary code, networks, shell tools, or MCP transports.
 - The twelve-case policy corpus is synthetic, implementation-aligned regression evidence.
+- Capability receipts prove equality of bounded observations, not server authentication, tool honesty, effect authorization, or safety. Benign definition changes can require reapproval.
+- A trusted adapter must obtain a fresh observation and keep the checked server connection bound to dispatch. Equality checks alone cannot prevent a remote implementation changing after observation; stronger guarantees require a server-enforced version precondition.
+- The installed wheel contains library code; run the full application demo from the checkout or supply its data directory explicitly.
+- The fourteen-case capability corpus is synthetic and implementation-aligned; it has not been tested against independently captured framework catalogs.
 
 ## Best Next Improvement
 
-Add a claim-level semantic support evaluator that preserves the deterministic receipt as the identity layer, then compare local natural-language-inference and optional judge models on an independently authored citation corpus with human labels.
+Add adapters for independently captured OpenAI Agents, Pydantic AI, and LangChain MCP tool catalogs, then test list-change, cache invalidation, reconnect, and multi-server name-collision behavior without adding a paid-model requirement.
 
 ## Project Records
 
@@ -286,6 +354,12 @@ Add a claim-level semantic support evaluator that preserves the deterministic re
 - [Grounding receipt decision](docs/decisions/2026-10-08-content-addressed-grounding-receipts.md)
 - [Grounding model boundary](docs/models/2026-10-08-grounding-receipt-model-card.md)
 - [Grounding verification record](docs/experiments/2026-10-08-grounding-receipts-verification.md)
+- [Approved MCP capability spec](docs/superpowers/specs/2026-10-23-mcp-capability-receipts.md)
+- [MCP capability reference comparison](docs/notes/2026-10-23-mcp-capability-reference-review.md)
+- [MCP capability decision](docs/decisions/2026-10-23-bind-reviewed-mcp-capability.md)
+- [MCP capability corpus card](docs/datasets/mcp-capability-drift-v1.md)
+- [Capability receipt model boundary](docs/models/2026-10-23-capability-receipt-model-card.md)
+- [MCP capability verification record](docs/experiments/2026-10-23-mcp-capability-receipts-verification.md)
 
 ## License
 

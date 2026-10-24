@@ -10,9 +10,15 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal
 
+from app.agent.capability_receipts import (
+    ToolCapability,
+    capability_receipt,
+    clone_capability,
+    compare_capabilities,
+)
 from app.models.schemas import ToolApprovalRequest
 
-POLICY_VERSION = "2026-10-01.v1"
+POLICY_VERSION = "2026-10-23.v2"
 
 
 @dataclass(frozen=True)
@@ -29,6 +35,7 @@ class ToolInvocation:
     arguments: dict[str, Any]
     project: str | None = None
     policy_version: str = POLICY_VERSION
+    capability: ToolCapability | None = None
 
 
 @dataclass(frozen=True)
@@ -38,6 +45,7 @@ class ToolPolicyDecision:
     approval_request: ToolApprovalRequest | None = None
     receipt: str | None = None
     arguments: dict[str, Any] | None = None
+    findings: tuple[str, ...] = ()
 
 
 @dataclass
@@ -46,7 +54,10 @@ class _ApprovalRecord:
     session_id: str
     invocation_digest: str
     arguments: dict[str, Any]
-    status: Literal["pending", "approved", "rejected", "consumed", "expired"] = "pending"
+    capability: ToolCapability | None = None
+    status: Literal["pending", "approved", "rejected", "consumed", "expired"] = (
+        "pending"
+    )
     approved_at: str | None = None
 
 
@@ -61,14 +72,20 @@ DEFAULT_POLICIES = {
 }
 
 
-def confined_path(root: Path, relative_name: str, *, filename_only: bool = False) -> Path:
+def confined_path(
+    root: Path, relative_name: str, *, filename_only: bool = False
+) -> Path:
     """Resolve a caller-controlled path and prove it remains under root."""
     if not relative_name or "\x00" in relative_name:
         raise ValueError("Path must be a non-empty string without null bytes.")
     candidate_fragment = Path(relative_name)
     if candidate_fragment.is_absolute():
         raise ValueError("Absolute paths are not allowed.")
-    if filename_only and (candidate_fragment.name != relative_name or "/" in relative_name or "\\" in relative_name):
+    if filename_only and (
+        candidate_fragment.name != relative_name
+        or "/" in relative_name
+        or "\\" in relative_name
+    ):
         raise ValueError("Only a file name without directory components is allowed.")
     resolved_root = root.resolve()
     resolved_candidate = (resolved_root / candidate_fragment).resolve()
@@ -111,13 +128,20 @@ class ToolPolicyEngine:
         return {
             "policy_version": POLICY_VERSION,
             "approval_ttl_seconds": self._approval_ttl_seconds,
+            "capability_binding": {
+                "supported": True,
+                "receipt_schema_version": "1",
+                "consume_requires_fresh_observation": True,
+            },
             "tools": [
                 {
                     "name": policy.name,
                     "risk": policy.risk,
                     "requires_approval": policy.requires_approval,
                 }
-                for policy in sorted(self._policies.values(), key=lambda item: item.name)
+                for policy in sorted(
+                    self._policies.values(), key=lambda item: item.name
+                )
             ],
             "allowed_projects": sorted(self._allowed_projects),
         }
@@ -125,7 +149,9 @@ class ToolPolicyEngine:
     def validate_project(self, project: str | None) -> bool:
         return project is None or project in self._allowed_projects
 
-    def authorize(self, invocation: ToolInvocation, *, now: datetime | None = None) -> ToolPolicyDecision:
+    def authorize(
+        self, invocation: ToolInvocation, *, now: datetime | None = None
+    ) -> ToolPolicyDecision:
         current = self._utc(now)
         policy = self._policies.get(invocation.tool_name)
         if policy is None:
@@ -145,6 +171,9 @@ class ToolPolicyEngine:
         stored_arguments = json.loads(
             json.dumps(invocation.arguments, ensure_ascii=False, allow_nan=False)
         )
+        stored_capability = (
+            clone_capability(invocation.capability) if invocation.capability else None
+        )
         with self._lock:
             matching = self._matching_record(invocation, invocation_digest)
             if matching is not None:
@@ -159,7 +188,11 @@ class ToolPolicyEngine:
                         reason="approval_expired",
                     )
                 elif matching.status == "approved":
-                    return ToolPolicyDecision("denied", "approval_id_required", matching.request)
+                    return ToolPolicyDecision(
+                        "denied",
+                        "approval_id_required",
+                        matching.request.model_copy(deep=True),
+                    )
                 elif matching.status == "rejected":
                     matching.status = "consumed"
                     self._audit(
@@ -171,10 +204,16 @@ class ToolPolicyEngine:
                     )
                     return ToolPolicyDecision("denied", "approval_rejected")
                 elif matching.status == "pending":
-                    return ToolPolicyDecision("pending", "approval_required", matching.request)
+                    return ToolPolicyDecision(
+                        "pending",
+                        "approval_required",
+                        matching.request.model_copy(deep=True),
+                    )
 
             created_at = current.isoformat()
-            expires_at = (current + timedelta(seconds=self._approval_ttl_seconds)).isoformat()
+            expires_at = (
+                current + timedelta(seconds=self._approval_ttl_seconds)
+            ).isoformat()
             approval_id = str(uuid.uuid4())
             request = ToolApprovalRequest(
                 approval_id=approval_id,
@@ -184,14 +223,20 @@ class ToolPolicyEngine:
                 policy_version=POLICY_VERSION,
                 invocation_digest=invocation_digest,
                 arguments=self._preview_arguments(invocation.arguments),
+                capability=(
+                    capability_receipt(stored_capability).to_dict()
+                    if stored_capability
+                    else None
+                ),
                 created_at=created_at,
                 expires_at=expires_at,
             )
             self._records[approval_id] = _ApprovalRecord(
-                request=request,
+                request=request.model_copy(deep=True),
                 session_id=invocation.session_id,
                 invocation_digest=invocation_digest,
                 arguments=stored_arguments,
+                capability=stored_capability,
             )
             self._audit(
                 "approval_requested",
@@ -209,6 +254,7 @@ class ToolPolicyEngine:
         session_id: str,
         tool_name: str,
         project: str | None,
+        observed_capability: ToolCapability | None = None,
         now: datetime | None = None,
     ) -> ToolPolicyDecision:
         current = self._utc(now)
@@ -217,21 +263,94 @@ class ToolPolicyEngine:
             if record is None:
                 return ToolPolicyDecision("denied", "approval_not_found")
             if not hmac.compare_digest(record.session_id, session_id):
-                self._audit_record("execution_denied", record, current, reason="session_mismatch")
+                self._audit_record(
+                    "execution_denied", record, current, reason="session_mismatch"
+                )
                 return ToolPolicyDecision("denied", "session_mismatch")
-            if record.request.tool_name != tool_name or record.request.project != project:
-                self._audit_record("execution_denied", record, current, reason="scope_mismatch")
+            if (
+                record.request.tool_name != tool_name
+                or record.request.project != project
+            ):
+                self._audit_record(
+                    "execution_denied", record, current, reason="scope_mismatch"
+                )
                 return ToolPolicyDecision("denied", "scope_mismatch")
             if record.request.policy_version != POLICY_VERSION:
-                self._audit_record("execution_denied", record, current, reason="stale_policy_version")
+                self._audit_record(
+                    "execution_denied", record, current, reason="stale_policy_version"
+                )
                 return ToolPolicyDecision("denied", "stale_policy_version")
             if current >= datetime.fromisoformat(record.request.expires_at):
                 record.status = "expired"
-                self._audit_record("expired", record, current, reason="approval_expired")
+                self._audit_record(
+                    "expired", record, current, reason="approval_expired"
+                )
                 return ToolPolicyDecision("denied", "approval_expired")
             if record.status != "approved":
-                self._audit_record("execution_denied", record, current, reason=f"approval_{record.status}")
+                self._audit_record(
+                    "execution_denied",
+                    record,
+                    current,
+                    reason=f"approval_{record.status}",
+                )
                 return ToolPolicyDecision("denied", f"approval_{record.status}")
+            if record.capability is None and observed_capability is not None:
+                self._audit_record(
+                    "execution_denied",
+                    record,
+                    current,
+                    reason="capability_binding_required",
+                    findings=("CAPABILITY_BINDING_REQUIRED",),
+                )
+                return ToolPolicyDecision(
+                    "denied",
+                    "capability_binding_required",
+                    findings=("CAPABILITY_BINDING_REQUIRED",),
+                )
+            if record.capability is not None:
+                if observed_capability is None:
+                    self._audit_record(
+                        "execution_denied",
+                        record,
+                        current,
+                        reason="capability_evidence_required",
+                        findings=("CAPABILITY_EVIDENCE_REQUIRED",),
+                    )
+                    return ToolPolicyDecision(
+                        "denied",
+                        "capability_evidence_required",
+                        findings=("CAPABILITY_EVIDENCE_REQUIRED",),
+                    )
+                try:
+                    comparison = compare_capabilities(
+                        record.capability, observed_capability
+                    )
+                except (TypeError, ValueError, UnicodeError):
+                    self._audit_record(
+                        "execution_denied",
+                        record,
+                        current,
+                        reason="capability_evidence_invalid",
+                        findings=("CAPABILITY_EVIDENCE_INVALID",),
+                    )
+                    return ToolPolicyDecision(
+                        "denied",
+                        "capability_evidence_invalid",
+                        findings=("CAPABILITY_EVIDENCE_INVALID",),
+                    )
+                if comparison.verdict == "blocked":
+                    self._audit_record(
+                        "execution_denied",
+                        record,
+                        current,
+                        reason="capability_drift",
+                        findings=comparison.findings,
+                    )
+                    return ToolPolicyDecision(
+                        "denied",
+                        "capability_drift",
+                        findings=comparison.findings,
+                    )
             record.status = "consumed"
             receipt = self._receipt(record)
             self._audit_record(
@@ -262,11 +381,17 @@ class ToolPolicyEngine:
             if record is None:
                 raise KeyError("Approval request was not found.")
             if not hmac.compare_digest(record.session_id, session_id):
-                self._audit_record("decision_denied", record, current, reason="session_mismatch")
-                raise PermissionError("Approval request belongs to a different session.")
+                self._audit_record(
+                    "decision_denied", record, current, reason="session_mismatch"
+                )
+                raise PermissionError(
+                    "Approval request belongs to a different session."
+                )
             if current >= datetime.fromisoformat(record.request.expires_at):
                 record.status = "expired"
-                self._audit_record("expired", record, current, reason="approval_expired")
+                self._audit_record(
+                    "expired", record, current, reason="approval_expired"
+                )
                 raise TimeoutError("Approval request has expired.")
             if record.status != "pending":
                 raise ValueError(f"Approval request is already {record.status}.")
@@ -278,9 +403,11 @@ class ToolPolicyEngine:
                 current,
                 reason="explicit_user_decision",
             )
-            return record.request
+            return record.request.model_copy(deep=True)
 
-    def _matching_record(self, invocation: ToolInvocation, digest: str) -> _ApprovalRecord | None:
+    def _matching_record(
+        self, invocation: ToolInvocation, digest: str
+    ) -> _ApprovalRecord | None:
         for record in reversed(list(self._records.values())):
             if (
                 record.session_id == invocation.session_id
@@ -293,13 +420,26 @@ class ToolPolicyEngine:
     def _invocation_digest(self, invocation: ToolInvocation) -> str:
         payload = {
             "arguments": invocation.arguments,
+            "capability_digest": (
+                capability_receipt(invocation.capability).capability_digest
+                if invocation.capability
+                else None
+            ),
             "policy_version": invocation.policy_version,
             "project": invocation.project,
             "session_id": invocation.session_id,
             "tool_name": invocation.tool_name,
         }
-        canonical = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True, allow_nan=False)
-        return hmac.new(self._secret, canonical.encode("utf-8"), hashlib.sha256).hexdigest()
+        canonical = json.dumps(
+            payload,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+            allow_nan=False,
+        )
+        return hmac.new(
+            self._secret, canonical.encode("utf-8"), hashlib.sha256
+        ).hexdigest()
 
     @staticmethod
     def _preview_arguments(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -308,7 +448,9 @@ class ToolPolicyEngine:
         if summary is not None:
             summary_text = str(summary)
             preview["summary_chars"] = len(summary_text)
-            preview["summary_sha256"] = hashlib.sha256(summary_text.encode("utf-8")).hexdigest()
+            preview["summary_sha256"] = hashlib.sha256(
+                summary_text.encode("utf-8")
+            ).hexdigest()
         sources = arguments.get("sources")
         if isinstance(sources, list):
             safe_sources = []
@@ -320,7 +462,9 @@ class ToolPolicyEngine:
                     {
                         "chunk_id": source.get("chunk_id"),
                         "path": source.get("path"),
-                        "content_sha256": hashlib.sha256(content.encode("utf-8")).hexdigest(),
+                        "content_sha256": hashlib.sha256(
+                            content.encode("utf-8")
+                        ).hexdigest(),
                     }
                 )
             preview["sources"] = safe_sources
@@ -328,7 +472,9 @@ class ToolPolicyEngine:
 
     def _receipt(self, record: _ApprovalRecord) -> str:
         payload = f"{record.request.approval_id}:{record.invocation_digest}:{record.approved_at}:consumed"
-        return hmac.new(self._secret, payload.encode("utf-8"), hashlib.sha256).hexdigest()
+        return hmac.new(
+            self._secret, payload.encode("utf-8"), hashlib.sha256
+        ).hexdigest()
 
     @staticmethod
     def _utc(value: datetime | None) -> datetime:
@@ -361,6 +507,11 @@ class ToolPolicyEngine:
                 "policy_version": invocation.policy_version,
                 "session_hash": self._session_hash(invocation.session_id),
                 "invocation_digest": self._invocation_digest(invocation),
+                "capability_digest": (
+                    capability_receipt(invocation.capability).capability_digest
+                    if invocation.capability
+                    else None
+                ),
                 "reason": reason,
                 "receipt": receipt,
             }
@@ -374,6 +525,7 @@ class ToolPolicyEngine:
         *,
         reason: str,
         receipt: str | None = None,
+        findings: tuple[str, ...] = (),
     ) -> None:
         self._write_audit(
             {
@@ -385,7 +537,13 @@ class ToolPolicyEngine:
                 "policy_version": record.request.policy_version,
                 "session_hash": self._session_hash(record.session_id),
                 "invocation_digest": record.invocation_digest,
+                "capability_digest": (
+                    capability_receipt(record.capability).capability_digest
+                    if record.capability
+                    else None
+                ),
                 "reason": reason,
+                "findings": list(findings),
                 "receipt": receipt,
             }
         )
@@ -394,5 +552,6 @@ class ToolPolicyEngine:
         with self._lock:
             self._audit_path.parent.mkdir(parents=True, exist_ok=True)
             with self._audit_path.open("a", encoding="utf-8") as handle:
-                handle.write(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")
-
+                handle.write(
+                    json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n"
+                )
