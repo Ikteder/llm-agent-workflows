@@ -83,3 +83,9 @@ git diff --check
 ```
 
 Ruff checks target changed Python files. The initial repository-wide run exposed existing lint and formatting findings in unrelated files, which were not silently reported as passing or included in this patch.
+
+## Publication verification
+
+The implementation commit is `8314723b3d61448a08888b2010d52447033cb93c`. It was pushed to the existing public repository [Ikteder/llm-agent-workflows](https://github.com/Ikteder/llm-agent-workflows) and fast-forwarded to public `main` after [branch CI run 40069023724](https://github.com/Ikteder/llm-agent-workflows/actions/runs/40069023724) completed successfully. That workflow tested Python 3.12 on Ubuntu. Repository, public README, and the capability SVG returned HTTP 200. Git remote inspection confirmed the published main SHA matched the implementation commit. No upstream pull request or acceptance is claimed.
+
+This is the final project for the recurring automation at the user's request. The workspace catalog and automation memory hold the final scheduler cancellation and final documentation-commit verification records.
